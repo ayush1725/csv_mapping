@@ -8,10 +8,10 @@ those by hand works for a handful of partners and breaks down at 1000+. This
 resolves them with a tiered pipeline that keeps a human in the loop only where
 it matters.
 
-**Status:** Layers 0–2 implemented and tested. Layers 3–4 (embeddings, LLM) are
-not built yet — headers this pipeline can't resolve confidently are emitted as
-`UNRESOLVED` with `needs_review=True`, which is exactly the queue those layers
-will consume.
+**Status:** Layers 0–2 and Layer 4 (LLM) implemented and tested. Layer 3
+(embeddings) is not built — headers surviving Layers 0–2 currently go straight
+to Layer 4. Layer 4 is opt-in: without an `llm_client` the resolver is fully
+deterministic and makes no network calls.
 
 ---
 
@@ -27,7 +27,7 @@ model only sees headers that genuinely need judgment.
 | 1. Alias dictionary | exact lookup, grown from confirmed mappings | none |
 | 2. Fuzzy | Jaro-Winkler / ratio / token-sort, best-of | none |
 | 3. Embeddings *(not built)* | cosine similarity vs canonical fields | cheap |
-| 4. LLM *(not built)* | header + sample values + top-K candidates | per-call |
+| 4. LLM | full schema + sample-value type inference, structured output | per-call |
 
 Every confirmed mapping is written back to the alias dictionary, so the free
 layer covers more traffic over time and the model is needed less.
@@ -68,6 +68,59 @@ Feed a human decision back in:
 resolver.confirm(result, "col_17", "Transaction Id")
 # next file containing "col_17" resolves via ALIAS, for free
 ```
+
+---
+
+## Layer 4 (LLM)
+
+```python
+from header_resolver import AnthropicClient, Resolver, Schema
+
+client = AnthropicClient(provider="bedrock", aws_region="ap-south-1")
+# or: AnthropicClient(provider="direct")     # reads ANTHROPIC_API_KEY
+
+resolver = Resolver(Schema.load_builtin("policy_v2"), llm_client=client)
+
+result = resolver.resolve(
+    ["col_17", "Premium Amt"],
+    samples={
+        "col_17": ["2020-01-15", "2019-11-03"],
+        "Premium Amt": ["1250.00", "980.50"],
+    },
+)
+print(result.layer4)   # {'resolved': 2, 'abstained': 0, 'rejected': 0, 'errors': []}
+```
+
+Four things keep it safe enough to act on:
+
+**Abstention is a first-class answer.** `target: null` is explicitly allowed and
+encouraged. A wrong auto-applied mapping silently corrupts policy records; an
+extra row in the review queue costs a few seconds.
+
+**Hallucinated fields are rejected.** A target outside the schema is discarded
+on the way back in, not written through.
+
+**Answering isn't the same as being trusted.** Below `accept_threshold` (0.85)
+the answer is recorded as a suggestion but stays in review.
+
+**An outage degrades, it doesn't fail.** By default an LLM error leaves the
+header unresolved and the upload proceeds to review. Set
+`Layer4Config(fail_open=False)` to raise instead.
+
+### Sending the whole schema, not a shortlist
+
+An earlier version shortlisted candidates by string similarity. That is
+self-defeating for this layer: `Premium Amt` has no textual overlap with
+`Amount`, so ranking pruned the correct answer out of the list and forced an
+abstention. Now the full schema goes in the system prompt — 58 fields is ~900
+tokens, identical on every call, so it sits in the cacheable prefix.
+
+**Sample-value type inference does the narrowing instead.** ISO dates collapse
+58 fields to the 8 date fields; `1250.00` collapses them to the 5 decimal
+fields, one of which is `Amount`. Inference is deliberately conservative and
+returns `unknown` unless the evidence is clear, because a wrong type hint
+prunes the correct field entirely. Common null markers (`N/A`, `NULL`, `-`)
+are ignored rather than counted as values.
 
 ---
 
@@ -172,6 +225,9 @@ src/header_resolver/
   fuzzy.py       Layer 2 — multi-metric similarity
   guards.py      auto-derived confusable-pair list
   entities.py    two-stage entity resolution
+  typing_hints.py  sample-value type inference
+  llm.py         provider-agnostic client (direct / Bedrock / mock)
+  layer4.py      LLM reasoning over the review queue
   resolver.py    orchestration, thresholds, conflict/gap detection
   schema.py      canonical schema loading and indexing
   models.py      Mapping, ResolveResult, Layer, ReviewReason
@@ -192,5 +248,8 @@ data/
 - **`Mobile` → `Mobile No` is flagged** despite being obviously correct
   (0.89, below the 92 threshold). Tightening this needs a real eval set, not
   a guessed threshold.
-- **No sample-value type checking yet.** The `samples` argument is accepted
-  and ignored; wiring it in is the cheapest remaining accuracy win.
+- **Layer 3 (embeddings) is not built.** Everything Layers 0–2 can't settle
+  goes straight to Layer 4, so LLM call volume is higher than the final design
+  intends. Adding Layer 3 is a cost optimisation, not a correctness one.
+- **Sample-value types are used as a hint, not a hard filter.** A column whose
+  values contradict its mapped field is not currently rejected post-mapping.

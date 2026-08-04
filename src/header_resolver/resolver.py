@@ -1,21 +1,26 @@
-"""Pipeline orchestration for Layers 0-2.
+"""Pipeline orchestration.
 
-Deliberately three passes, because a header cannot be resolved in isolation:
+Deliberately multi-pass, because a header cannot be resolved in isolation:
 whether a bare `first_name` belongs to the proposer or the insured depends on
 what *else* is in the file.
 
     Pass 1  entity assignment across the whole header list
-    Pass 2  per-header candidate generation, restricted by entity
-    Pass 3  global reconciliation — guards, margins, conflicts, gaps
+    Pass 2  per-header resolution — alias, then fuzzy, restricted by entity
+    Pass 3  Layer 4 (LLM) on whatever passes 1-2 could not settle
+    Pass 4  global reconciliation — conflicts, missing required fields
 
-Layers 3 (embeddings) and 4 (LLM) are not implemented here. Headers this
-pipeline cannot resolve confidently are emitted with `resolved_by=UNRESOLVED`
-and `needs_review=True`, which is exactly the queue those layers will consume.
+Reconciliation runs last so it sees every layer's final answer; running it
+before Layer 4 would flag conflicts the LLM then resolves.
+
+Layer 4 is opt-in: without an `llm_client` the resolver is fully deterministic
+and makes no network calls. Layer 3 (embeddings) is not implemented — headers
+that survive to the review queue currently go straight to Layer 4.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from .aliases import AliasKey, AliasStore
 from .entities import resolve_entities
@@ -24,6 +29,10 @@ from .guards import GuardList, build_guard_list
 from .models import Layer, Mapping, ResolveResult, ReviewReason
 from .normalize import normalize
 from .schema import Schema
+
+if TYPE_CHECKING:  # pragma: no cover
+    from .layer4 import Layer4Config
+    from .llm import LLMClient
 
 
 @dataclass
@@ -51,11 +60,26 @@ class Resolver:
         aliases: AliasStore | None = None,
         thresholds: Thresholds | None = None,
         guard_list: GuardList | None = None,
+        llm_client: "LLMClient | None" = None,
+        layer4_config: "Layer4Config | None" = None,
     ) -> None:
         self.schema = schema
         self.aliases = aliases or AliasStore()
         self.t = thresholds or Thresholds()
         self.guards = guard_list or build_guard_list(schema)
+
+        # Layer 4 is opt-in. Without a client the resolver stays fully
+        # deterministic and makes no network calls.
+        self.layer4 = None
+        if llm_client is not None:
+            from .layer4 import Layer4Resolver
+
+            self.layer4 = Layer4Resolver(
+                schema=schema,
+                client=llm_client,
+                guards=self.guards,
+                config=layer4_config,
+            )
 
     # ------------------------------------------------------------------
 
@@ -64,6 +88,7 @@ class Resolver:
         headers: list[str],
         tenant: str = "default",
         samples: dict[str, list[str]] | None = None,
+        use_llm: bool = True,
     ) -> ResolveResult:
         alias_key = AliasKey(tenant=tenant, schema_id=self.schema.schema_id)
 
@@ -75,7 +100,12 @@ class Resolver:
         for header in headers:
             mappings.append(self._resolve_one(header, verdicts, alias_key))
 
-        # Pass 3 — global reconciliation.
+        # Pass 3 — Layer 4 on whatever Layers 0-2 could not settle.
+        layer4_stats = None
+        if self.layer4 is not None and use_llm:
+            layer4_stats = self.layer4.resolve(mappings, samples).to_dict()
+
+        # Pass 4 — global reconciliation, after every layer has had its say.
         conflicts = self._flag_conflicts(mappings)
         unmapped = self._unmapped_required(mappings)
 
@@ -84,6 +114,7 @@ class Resolver:
             mappings=mappings,
             unmapped_required=unmapped,
             conflicts=conflicts,
+            layer4=layer4_stats,
         )
 
     # ------------------------------------------------------------------

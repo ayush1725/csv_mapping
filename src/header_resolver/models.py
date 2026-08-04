@@ -107,6 +107,7 @@ class ResolveResult:
     unmapped_required: list[str] = field(default_factory=list)
     conflicts: list[dict] = field(default_factory=list)
     template_hit: bool = False
+    layer4: dict | None = None   # LLM stats when Layer 4 ran, else None
 
     @property
     def auto_appliable(self) -> list[Mapping]:
@@ -131,4 +132,5 @@ class ResolveResult:
             "unmapped_required": self.unmapped_required,
             "conflicts": self.conflicts,
             "layer_counts": self.layer_counts(),
+            "layer4": self.layer4,
         }
