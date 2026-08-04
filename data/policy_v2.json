@@ -52,15 +52,16 @@
     { "name": "Sum Insured",              "type": "decimal", "required": true  },
 
     { "name": "Customer ID_Plan",         "type": "string",  "required": false, "entity": "insured", "attribute": "customer_id" },
-    { "name": "Title_Plan",               "type": "enum",    "required": false, "entity": "insured", "attribute": "title" },
-    { "name": "First Name_Plan",          "type": "string",  "required": false, "entity": "insured", "attribute": "first_name" },
-    { "name": "Last Name_Plan",           "type": "string",  "required": false, "entity": "insured", "attribute": "last_name" },
-    { "name": "DOB_Plan",                 "type": "date",    "required": false, "entity": "insured", "attribute": "dob" },
 
     { "name": "Product Plan Option",      "type": "string",  "required": false },
     { "name": "Loan Amount",              "type": "decimal", "required": false },
     { "name": "Payment Frequency",        "type": "enum",    "required": false },
     { "name": "Relation",                 "type": "enum",    "required": false },
+
+    { "name": "Title_Plan",               "type": "enum",    "required": false, "entity": "insured", "attribute": "title" },
+    { "name": "First Name_Plan",          "type": "string",  "required": false, "entity": "insured", "attribute": "first_name" },
+    { "name": "Last Name_Plan",           "type": "string",  "required": false, "entity": "insured", "attribute": "last_name" },
+    { "name": "DOB_Plan",                 "type": "date",    "required": false, "entity": "insured", "attribute": "dob" },
 
     { "name": "Nominee Details YES/NO",   "type": "boolean", "required": false },
     { "name": "Nominee Title",            "type": "enum",    "required": false, "entity": "nominee", "attribute": "title" },
