@@ -1,0 +1,90 @@
+{
+  "schema_id": "policy_v2",
+  "description": "Credit-life / loan-protection policy master schema",
+  "entity_groups": {
+    "proposer": {
+      "label": "Proposer (borrower)",
+      "detect": { "suffix": null, "prefix": null, "default": true }
+    },
+    "insured": {
+      "label": "Insured member",
+      "detect": { "suffix": "_plan", "prefix": null, "default": false }
+    },
+    "nominee": {
+      "label": "Nominee (beneficiary)",
+      "detect": { "suffix": null, "prefix": "nominee", "default": false }
+    },
+    "guardian": {
+      "label": "Guardian (when nominee is a minor)",
+      "detect": { "suffix": null, "prefix": "guardian", "default": false }
+    }
+  },
+  "fields": [
+    { "name": "Member Number",            "type": "string",  "required": true  },
+    { "name": "Application Date",         "type": "date",    "required": true  },
+    { "name": "No. of Lives",             "type": "integer", "required": false },
+    { "name": "Tenure",                   "type": "integer", "required": false },
+    { "name": "Loan A/c No",              "type": "string",  "required": true  },
+    { "name": "Loan Type",                "type": "string",  "required": false },
+    { "name": "Branch Name",              "type": "string",  "required": false },
+    { "name": "SP Code Details",          "type": "string",  "required": false },
+    { "name": "RM Code",                  "type": "string",  "required": false },
+    { "name": "Branch Code",              "type": "string",  "required": false },
+    { "name": "Customer A/c No",          "type": "string",  "required": false },
+
+    { "name": "Customer ID",              "type": "string",  "required": true,  "entity": "proposer", "attribute": "customer_id" },
+    { "name": "Title",                    "type": "enum",    "required": false, "entity": "proposer", "attribute": "title" },
+    { "name": "First Name",               "type": "string",  "required": true,  "entity": "proposer", "attribute": "first_name" },
+    { "name": "Last Name",                "type": "string",  "required": true,  "entity": "proposer", "attribute": "last_name" },
+    { "name": "DOB",                      "type": "date",    "required": true,  "entity": "proposer", "attribute": "dob" },
+
+    { "name": "Pin Code",                 "type": "string",  "required": false },
+    { "name": "PAN",                      "type": "string",  "required": false },
+    { "name": "Address Line 1",           "type": "string",  "required": false },
+    { "name": "Address Line 2",           "type": "string",  "required": false },
+    { "name": "Email Id",                 "type": "email",   "required": false },
+    { "name": "Mobile No",                "type": "phone",   "required": false },
+    { "name": "Amount",                   "type": "decimal", "required": true  },
+    { "name": "Transaction Id",           "type": "string",  "required": false },
+    { "name": "Transaction Date",         "type": "date",    "required": false },
+    { "name": "Insurer Bank",             "type": "string",  "required": false },
+    { "name": "Loan Disbursal Date",      "type": "date",    "required": false },
+    { "name": "Sum Insured",              "type": "decimal", "required": true  },
+
+    { "name": "Customer ID_Plan",         "type": "string",  "required": false, "entity": "insured", "attribute": "customer_id" },
+    { "name": "Title_Plan",               "type": "enum",    "required": false, "entity": "insured", "attribute": "title" },
+    { "name": "First Name_Plan",          "type": "string",  "required": false, "entity": "insured", "attribute": "first_name" },
+    { "name": "Last Name_Plan",           "type": "string",  "required": false, "entity": "insured", "attribute": "last_name" },
+    { "name": "DOB_Plan",                 "type": "date",    "required": false, "entity": "insured", "attribute": "dob" },
+
+    { "name": "Product Plan Option",      "type": "string",  "required": false },
+    { "name": "Loan Amount",              "type": "decimal", "required": false },
+    { "name": "Payment Frequency",        "type": "enum",    "required": false },
+    { "name": "Relation",                 "type": "enum",    "required": false },
+
+    { "name": "Nominee Details YES/NO",   "type": "boolean", "required": false },
+    { "name": "Nominee Title",            "type": "enum",    "required": false, "entity": "nominee", "attribute": "title" },
+    { "name": "Nominee First Name",       "type": "string",  "required": false, "entity": "nominee", "attribute": "first_name" },
+    { "name": "Nominee Last Name",        "type": "string",  "required": false, "entity": "nominee", "attribute": "last_name" },
+    { "name": "Nominee Relation",         "type": "enum",    "required": false, "entity": "nominee", "attribute": "relation" },
+    { "name": "Nominee DOB",              "type": "date",    "required": false, "entity": "nominee", "attribute": "dob" },
+
+    { "name": "Guardian FirstName",       "type": "string",  "required": false, "entity": "guardian", "attribute": "first_name" },
+    { "name": "Guardian LastName",        "type": "string",  "required": false, "entity": "guardian", "attribute": "last_name" },
+    { "name": "Guardian DOB",             "type": "date",    "required": false, "entity": "guardian", "attribute": "dob" },
+
+    { "name": "Add On",                   "type": "string",  "required": false },
+    { "name": "Add On SumInsured",        "type": "decimal", "required": false },
+    { "name": "Does your job require handling Hazardous Material or working at significant heights or high voltage or adventure sports, merchant navy & armed forces.",
+                                          "type": "boolean", "required": false, "short_name": "hazardous_occupation_declaration" },
+    { "name": "Annual_Income",            "type": "decimal", "required": false },
+    { "name": "Occupation",               "type": "string",  "required": false },
+    { "name": "Occupation_Class",         "type": "enum",    "required": false },
+    { "name": "GST IN Number",            "type": "string",  "required": false },
+    { "name": "GST Registration Date",    "type": "date",    "required": false },
+    { "name": "City",                     "type": "string",  "required": false },
+    { "name": "Payment Reference Number", "type": "string",  "required": false },
+    { "name": "PEP",                      "type": "boolean", "required": false },
+    { "name": "Agent Susp Receipt Id",    "type": "string",  "required": false }
+  ]
+}
