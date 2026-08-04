@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Header Resolution for Bulk Policy Upload</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  @page:first { margin: 0; }
+
+  :root{
+    --ink:#14181f;
+    --muted:#5b6572;
+    --line:#dde3ea;
+    --accent:#1c4e80;
+    --accent-soft:#eef4fa;
+    --warn:#8a4b08;
+    --warn-soft:#fdf3e7;
+    --good:#1d6a4a;
+    --good-soft:#eaf6f0;
+    --bad:#a02020;
+    --bad-soft:#fdeeee;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;
+    color:var(--ink); font-size:9.6pt; line-height:1.5; margin:0;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- cover ---------- */
+  .cover{
+    height:297mm; padding:34mm 24mm 24mm 24mm;
+    background:linear-gradient(160deg,#12314f 0%, #1c4e80 55%, #2f6ea8 100%);
+    color:#fff; page-break-after:always; position:relative;
+  }
+  .cover .eyebrow{
+    font-size:8.5pt; letter-spacing:.22em; text-transform:uppercase;
+    opacity:.72; margin-bottom:16mm;
+  }
+  .cover h1{ font-size:31pt; line-height:1.14; margin:0 0 7mm 0; font-weight:700; letter-spacing:-.01em; }
+  .cover .sub{ font-size:12.5pt; line-height:1.5; opacity:.9; max-width:135mm; font-weight:300; }
+  .cover .rule{ width:56mm; height:3px; background:rgba(255,255,255,.55); margin:11mm 0; }
+  .cover .meta{ position:absolute; bottom:24mm; left:24mm; right:24mm;
+    font-size:9pt; opacity:.8; display:flex; justify-content:space-between;
+    border-top:1px solid rgba(255,255,255,.25); padding-top:5mm; }
+  .cover .stats{ display:flex; gap:14mm; margin-top:14mm; }
+  .cover .stat .n{ font-size:23pt; font-weight:700; line-height:1; }
+  .cover .stat .l{ font-size:8.2pt; opacity:.78; margin-top:2.5mm; letter-spacing:.04em; }
+
+  /* ---------- structure ---------- */
+  h2{
+    font-size:15pt; margin:0 0 4mm 0; padding-bottom:2.5mm; font-weight:700;
+    border-bottom:2px solid var(--accent); color:var(--accent); letter-spacing:-.01em;
+  }
+  h2 .num{ color:#9db4cc; margin-right:3mm; font-weight:700; }
+  h3{ font-size:11pt; margin:7mm 0 2.5mm 0; font-weight:700; color:#1b2733; }
+  h4{ font-size:9.6pt; margin:5mm 0 1.5mm 0; font-weight:700; color:#2b3a4d; }
+  p{ margin:0 0 3mm 0; }
+  section{ page-break-before:always; }
+  section.cont{ page-break-before:auto; }
+  ul,ol{ margin:0 0 3mm 0; padding-left:5mm; }
+  li{ margin-bottom:1.4mm; }
+  strong{ font-weight:700; }
+  code{ font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace; font-size:8.6pt;
+        background:#f2f5f8; padding:.5mm 1.2mm; border-radius:2px; }
+
+  /* ---------- tables ---------- */
+  table{ width:100%; border-collapse:collapse; margin:3mm 0 4mm 0; font-size:8.8pt; }
+  th{ background:var(--accent); color:#fff; text-align:left; padding:2.2mm 2.6mm; font-weight:600; font-size:8.4pt; }
+  td{ padding:2mm 2.6mm; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr:nth-child(even) td{ background:#f8fafc; }
+  table.tight td, table.tight th{ padding:1.6mm 2.2mm; }
+  .num-col{ text-align:right; white-space:nowrap; }
+  table, .box, .cols, figure, .chart, pre{ break-inside:avoid; page-break-inside:avoid; }
+  h3{ break-after:avoid; page-break-after:avoid; }
+
+  /* ---------- callouts ---------- */
+  .box{ padding:3.4mm 4mm; border-radius:3px; margin:4mm 0; border-left:3.5px solid var(--accent);
+        background:var(--accent-soft); }
+  .box .t{ font-weight:700; font-size:9.2pt; margin-bottom:1.5mm; color:var(--accent); }
+  .box.warn{ border-left-color:#c8811a; background:var(--warn-soft); }
+  .box.warn .t{ color:var(--warn); }
+  .box.good{ border-left-color:#2a8a62; background:var(--good-soft); }
+  .box.good .t{ color:var(--good); }
+  .box.bad{ border-left-color:#c33; background:var(--bad-soft); }
+  .box.bad .t{ color:var(--bad); }
+  .box p:last-child{ margin-bottom:0; }
+
+  /* ---------- misc ---------- */
+  pre{ background:#f5f8fb; border:1px solid var(--line); border-left:3px solid #b9c9d9;
+       padding:3mm 3.5mm; font-family:"DejaVu Sans Mono",Menlo,Consolas,monospace;
+       font-size:8.1pt; line-height:1.45; overflow:hidden; white-space:pre-wrap;
+       border-radius:2px; margin:3mm 0; }
+  .lede{ font-size:10.6pt; color:#33404f; line-height:1.55; margin-bottom:5mm; }
+  .cols{ display:flex; gap:6mm; }
+  .cols > div{ flex:1; }
+  .tag{ display:inline-block; font-size:7.4pt; font-weight:700; padding:.5mm 1.8mm;
+        border-radius:2px; letter-spacing:.04em; text-transform:uppercase; }
+  .tag.req{ background:var(--bad-soft); color:var(--bad); }
+  .tag.new{ background:var(--warn-soft); color:var(--warn); }
+  .tag.ok{ background:var(--good-soft); color:var(--good); }
+
+  /* bar chart */
+  .bar-row{ display:flex; align-items:center; gap:2.5mm; margin-bottom:1.1mm; font-size:8.3pt; }
+  .bar-row .lbl{ width:52mm; text-align:right; color:#3a4553; }
+  .bar-row .track{ flex:1; background:#eef1f5; height:4.2mm; border-radius:2px; position:relative; }
+  .bar-row .fill{ height:100%; background:var(--accent); border-radius:2px; }
+  .bar-row .fill.lo{ background:#c8811a; }
+  .bar-row .fill.mid{ background:#5b8db8; }
+  .bar-row .val{ width:11mm; font-weight:700; color:#33404f; }
+
+  .toc{ font-size:9.6pt; }
+  .toc div{ display:flex; justify-content:space-between; padding:1.8mm 0;
+            border-bottom:1px dotted #ccd6e0; }
+  .toc .s{ color:var(--muted); }
+  .kicker{ font-size:8pt; letter-spacing:.16em; text-transform:uppercase;
+           color:var(--muted); font-weight:700; margin-bottom:2mm; }
+  .footnote{ font-size:8.2pt; color:var(--muted); font-style:italic; margin-top:3mm; }
+</style>
+</head>
+<body>
+
+<!-- ================= COVER ================= -->
+<div class="cover">
+  <div class="eyebrow">Bulk Upload Portal &middot; Engineering Proposal</div>
+  <h1>AI Header Resolution<br>for Bulk Policy Upload</h1>
+  <div class="rule"></div>
+  <div class="sub">
+    Automatically mapping partner CSV headers to our canonical policy schema,
+    so bulk upload scales from tens of partners to a thousand without scaling
+    the manual effort behind it.
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n">24</div><div class="l">PARTNER FORMATS ANALYSED</div></div>
+    <div class="stat"><div class="n">86%</div><div class="l">HEADER REUSE MEASURED</div></div>
+    <div class="stat"><div class="n">~6</div><div class="l">TEMPLATE FAMILIES</div></div>
+  </div>
+  <div class="meta">
+    <div>Requirements, evidence and delivery plan</div>
+    <div>Draft for review</div>
+  </div>
+</div>
+
+<!-- ================= CONTENTS ================= -->
+<section class="cont">
+  <h2><span class="num">—</span>Contents</h2>
+  <div class="toc">
+    <div><span><strong>1.</strong> Executive summary</span><span class="s">The ask in one page</span></div>
+    <div><span><strong>2.</strong> The problem and where it sits</span><span class="s">Current flow, break point</span></div>
+    <div><span><strong>3.</strong> Evidence from partner data</span><span class="s">What 24 formats tell us</span></div>
+    <div><span><strong>4.</strong> Findings that shape the design</span><span class="s">Five things that change the build</span></div>
+    <div><span><strong>5.</strong> Proposed architecture</span><span class="s">Two-level mapping</span></div>
+    <div><span><strong>6.</strong> The resolution pipeline</span><span class="s">Five layers, cheapest first</span></div>
+    <div><span><strong>7.</strong> When we call the LLM</span><span class="s">Invocation policy and cost</span></div>
+    <div><span><strong>8.</strong> The learning dictionary</span><span class="s">How the system gets cheaper</span></div>
+    <div><span><strong>9.</strong> Gaps in our master schema</span><span class="s">Decisions only the business can make</span></div>
+    <div><span><strong>10.</strong> Delivery plan</span><span class="s">Phases and sequencing</span></div>
+    <div><span><strong>11.</strong> Risks and controls</span><span class="s">What can go wrong</span></div>
+    <div><span><strong>12.</strong> Decisions required</span><span class="s">What we need from this room</span></div>
+    <div><span><strong>A.</strong> Appendix</span><span class="s">Families, schema properties, caveats</span></div>
+  </div>
+
+  <h3 style="margin-top:12mm">How to read this document</h3>
+  <p>Sections 1&ndash;2 frame the problem. Sections 3&ndash;4 present what we
+  learned from analysing real partner files &mdash; this is the evidence base, and
+  several findings overturn assumptions we started with. Sections 5&ndash;8 are the
+  proposed solution. Sections 9&ndash;12 are what we need decided.</p>
+  <div class="box">
+    <div class="t">If you read only one thing</div>
+    <p>Our partners do not send 24 different formats. They send roughly
+    <strong>six</strong>, and 86% of their column headers are shared between
+    them. That single fact is what makes a thousand partners affordable, and it
+    means the first useful version of this system needs <strong>no AI at
+    all</strong>.</p>
+  </div>
+</section>
+
+<!-- ================= 1. EXEC SUMMARY ================= -->
+<section>
+  <h2><span class="num">1</span>Executive summary</h2>
+
+  <p class="lede">Partners upload policy CSVs whose column headers do not match
+  ours. Today a person fixes them by hand. That works at ten partners and fails
+  at a thousand. We propose a header resolution service that maps partner
+  columns to our canonical fields automatically, escalating only what genuinely
+  needs judgment &mdash; and that gets cheaper as it learns.</p>
+
+  <h3>The goal, stated as a number</h3>
+  <div class="box good">
+    <div class="t">Target outcome</div>
+    <p>Partner count grows from ~10 to 1000+. <strong>Person-hours spent fixing
+    headers stays flat. Wrong mappings stay at zero.</strong></p>
+  </div>
+
+  <h3>What we found in the data</h3>
+  <table>
+    <tr><th style="width:32%">Finding</th><th>What it means for us</th></tr>
+    <tr><td><strong>86% header reuse</strong></td><td>A learned dictionary resolves most columns of a new partner before any model is consulted.</td></tr>
+    <tr><td><strong>~6 template families</strong>, not 24 formats</td><td>Onboarding partner 1000 becomes "which family, then what is different" rather than mapping 60 columns from scratch.</td></tr>
+    <tr><td><strong>Three partners are byte-identical pairs</strong></td><td>Same upstream vendor system serving several lenders. Mapping one maps all.</td></tr>
+    <tr><td><strong>Some partners repeat unmarked person columns</strong></td><td>The most dangerous case we found. Detailed in Section 4.</td></tr>
+    <tr><td><strong>Several common partner fields have no home in our schema</strong></td><td>Needs a business decision, not an AI solution. Section 9.</td></tr>
+  </table>
+
+  <h3>What we propose</h3>
+  <p>A pre-flight header resolution service sitting between upload and the
+  existing SQS queue. <strong>The current pipeline is untouched.</strong> Columns
+  are resolved by a tiered pipeline that tries the cheapest method first and
+  only reaches an LLM for headers that genuinely need reasoning. Every human
+  confirmation is written back, so the free layers cover more traffic over time.</p>
+
+  <pre>Upload CSV ─▶ [ HEADER RESOLUTION ] ─▶ confident   ─▶ auto-remap ─▶ SQS ─▶ create-policy API
+                                     ─▶ uncertain   ─▶ review queue ─┘
+                                     ─▶ confirmed   ─▶ learned dictionary</pre>
+
+  <h3>Cost shape</h3>
+  <div class="box">
+    <div class="t">LLM cost scales with formats, not with files or rows</div>
+    <p>A partner is mapped once at onboarding &mdash; roughly <strong>one model
+    call</strong>. Their template is then pinned and subsequent uploads cost
+    <strong>nothing</strong>. Approximately <strong>1,000 model calls in total,
+    ever</strong>, versus hundreds of millions if we called a model per row.</p>
+  </div>
+
+  <h3>What we are asking for</h3>
+  <ol>
+    <li>Approval of the phased approach in Section 10</li>
+    <li>Answers to the seven decisions in Section 12 &mdash; two of which block real work</li>
+    <li>Access to historical partner files and the record of how they were manually fixed</li>
+    <li>An owner for the review queue</li>
+  </ol>
+</section>
+
+<!-- ================= 2. PROBLEM ================= -->
+<section>
+  <h2><span class="num">2</span>The problem and where it sits</h2>
+
+  <h3>Today's flow works &mdash; until the headers are wrong</h3>
+  <p>The bulk upload portal accepts a partner CSV, applies a configurable row
+  limit, pushes rows to SQS, and each row calls the create-policy API. This
+  pipeline is reliable and is not the subject of this proposal.</p>
+
+  <pre>Partner CSV ─▶ Portal upload ─▶ row limit ─▶ SQS queue ─▶ per-row ─▶ create-policy API
+                     ▲
+                     └── BREAK POINT: partner headers do not match our schema</pre>
+
+  <p>When a partner's headers do not match our canonical schema, the file cannot
+  proceed. Today a person resolves that by hand. The effort is roughly linear in
+  the number of partners, which is precisely the quantity we intend to grow by
+  two orders of magnitude.</p>
+
+  <h3>Scope of this proposal</h3>
+  <div class="cols">
+    <div>
+      <h4 style="color:var(--good)">In scope</h4>
+      <ul>
+        <li>Deciding which canonical field each uploaded column corresponds to</li>
+        <li>Escalating what cannot be decided confidently</li>
+        <li>Learning from every human correction</li>
+        <li>An audit trail of every mapping decision</li>
+      </ul>
+    </div>
+    <div>
+      <h4 style="color:var(--muted)">Out of scope</h4>
+      <ul>
+        <li>Row-value validation</li>
+        <li>The SQS pipeline</li>
+        <li>The create-policy API</li>
+        <li>Policy business rules</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="box warn">
+    <div class="t">A question worth asking before we build anything</div>
+    <p>If a partner template exists and partners ignore it, upstream enforcement
+    may be higher leverage than downstream mapping. The evidence suggests we
+    need both: <strong>only 4 of 24 partners adopted our template</strong>, and
+    the rest are sending their core banking system's native export. They largely
+    cannot conform, so mapping downstream is the pragmatic path.</p>
+  </div>
+
+  <h3>What we still do not know</h3>
+  <p>The following are unanswered and are the subject of a requested working
+  session with operations:</p>
+  <table class="tight">
+    <tr><th style="width:55%">Question</th><th>Why it matters</th></tr>
+    <tr><td>% of files that currently need a header fix</td><td>Baseline for the target</td></tr>
+    <tr><td>Person-hours per week spent on this today</td><td>Sizes the benefit</td></tr>
+    <tr><td>Who fixes them, and how they know the right mapping</td><td>Becomes our labelled training data</td></tr>
+    <tr><td>Whether a fix is remembered for the partner's next file</td><td>Tells us if the problem is repeated or one-off</td></tr>
+    <tr><td>What a wrong mapping costs downstream</td><td>Sets our auto-apply confidence threshold</td></tr>
+  </table>
+</section>
+
+<!-- ================= 3. EVIDENCE ================= -->
+<section>
+  <h2><span class="num">3</span>Evidence from partner data</h2>
+
+  <p class="lede">We analysed 24 partner header sets &mdash; 19 loan, 5 health,
+  0 travel. 1,113 header instances, 346 distinct after normalization. The
+  following are measurements, not estimates.</p>
+
+  <h3>3.1 The decisive number: 86% reuse</h3>
+  <div class="box good">
+    <div class="t">86% of header instances use headers that appear in two or more partners</div>
+    <p>191 of 346 distinct headers (55%) are shared across partners. The long
+    tail is real, but small. <strong>A dictionary seeded from these 24 partners
+    will resolve most columns of partner 25 for free.</strong></p>
+  </div>
+
+  <p>The most widely shared headers, and how many of the 24 partners send each:</p>
+  <pre>dob 22   ·   loan amount 19   ·   mobile no 19   ·   gender 17   ·   no of lives 17
+loan tenure 16   ·   cover type 16   ·   pin code 16   ·   relation 16   ·   transaction id 15
+nominee dob 14   ·   application date 13   ·   tenure 13   ·   sum insured 13   ·   pep 13</pre>
+
+  <h3>3.2 Partners cluster into roughly six families</h3>
+  <p>Measuring overlap between every pair of partners (Jaccard similarity on
+  normalized headers) shows clear clustering rather than 24 unique formats:</p>
+
+  <table>
+    <tr><th style="width:26%">Family</th><th>Members</th><th class="num-col">Similarity</th></tr>
+    <tr><td><strong>Vendor-identical</strong></td><td>Rbl ≡ House loader &nbsp;·&nbsp; Namra ≡ Mathooth &nbsp;·&nbsp; Hello ujjivan feeder ≡ Data loader</td><td class="num-col"><strong>1.00</strong></td></tr>
+    <tr><td><strong>Master-aligned</strong></td><td>Allience, Avanti, Hello ujjivan feeder, Data loader</td><td class="num-col">0.64&ndash;0.69</td></tr>
+    <tr><td><strong>Bare-repeat</strong></td><td>MPGB, GGB</td><td class="num-col">0.90</td></tr>
+    <tr><td><strong>Proposer/Applicant</strong></td><td>Ubi, Boi, Hospital partner, Capri g, Uss, Uco, Agri feeder, Hello ujjivan standalone</td><td class="num-col">0.55&ndash;0.78</td></tr>
+    <tr><td><strong>camelCase health</strong></td><td>Namra, Mathooth</td><td class="num-col">1.00</td></tr>
+    <tr><td><strong>Own-format singletons</strong></td><td>L&amp;T, Paisalo, Respo, IIFL, Tujbhavani, Sambhavati</td><td class="num-col">&mdash;</td></tr>
+  </table>
+
+  <div class="box">
+    <div class="t">Why this is the most important commercial finding</div>
+    <p>Three pairs are <strong>exact duplicates</strong> &mdash; the same upstream
+    vendor system serving multiple lenders. Partner 1000 is overwhelmingly likely
+    to be a variant of a family that already exists, not a new format. A
+    per-partner mapping table scales with <em>partners</em>; family templates
+    scale with <em>formats</em> &mdash; and formats grow far more slowly.</p>
+  </div>
+
+  <h3>3.3 Coverage against our schema is bimodal, not a gradient</h3>
+  <p>Percentage of our 58 canonical fields that each partner sends verbatim:</p>
+
+  <div class="chart">
+  <div class="bar-row"><div class="lbl">Allience</div><div class="track"><div class="fill" style="width:91%"></div></div><div class="val">91%</div></div>
+  <div class="bar-row"><div class="lbl">Hello ujjivan feeder</div><div class="track"><div class="fill" style="width:84%"></div></div><div class="val">84%</div></div>
+  <div class="bar-row"><div class="lbl">Data loader</div><div class="track"><div class="fill" style="width:84%"></div></div><div class="val">84%</div></div>
+  <div class="bar-row"><div class="lbl">Avanti</div><div class="track"><div class="fill" style="width:83%"></div></div><div class="val">83%</div></div>
+  <div class="bar-row" style="margin:2.5mm 0"><div class="lbl" style="color:#a02020;font-weight:700;font-size:7.6pt">▼ CLIFF</div><div class="track" style="background:none;border-top:1px dashed #c33;height:0"></div><div class="val"></div></div>
+  <div class="bar-row"><div class="lbl">GGB</div><div class="track"><div class="fill mid" style="width:50%"></div></div><div class="val">50%</div></div>
+  <div class="bar-row"><div class="lbl">MPGB</div><div class="track"><div class="fill mid" style="width:48%"></div></div><div class="val">48%</div></div>
+  <div class="bar-row"><div class="lbl">Respo / IIFL</div><div class="track"><div class="fill mid" style="width:33%"></div></div><div class="val">33%</div></div>
+  <div class="bar-row"><div class="lbl">Uco / Ubi / Tujbhavani / Boi</div><div class="track"><div class="fill lo" style="width:22%"></div></div><div class="val">22%</div></div>
+  <div class="bar-row"><div class="lbl">L&amp;T</div><div class="track"><div class="fill lo" style="width:19%"></div></div><div class="val">19%</div></div>
+  <div class="bar-row"><div class="lbl">Capri g</div><div class="track"><div class="fill lo" style="width:16%"></div></div><div class="val">16%</div></div>
+  <div class="bar-row"><div class="lbl">Rbl / House loader</div><div class="track"><div class="fill lo" style="width:10%"></div></div><div class="val">10%</div></div>
+  <div class="bar-row"><div class="lbl">Paisalo</div><div class="track"><div class="fill lo" style="width:9%"></div></div><div class="val">9%</div></div>
+  <div class="bar-row"><div class="lbl">Namra / Mathooth</div><div class="track"><div class="fill lo" style="width:5%"></div></div><div class="val">5%</div></div>
+  </div>
+
+  <p style="margin-top:4mm">There are two populations here, not a spectrum:
+  partners who <strong>adopted our template</strong> (83&ndash;91%) and partners
+  who send <strong>their own core system's export</strong> (5&ndash;33%). They
+  need different treatment &mdash; the first needs drift detection, the second
+  needs real mapping. This also tells us where to start the rollout.</p>
+</section>
+
+<!-- ================= 4. FINDINGS ================= -->
+<section>
+  <h2><span class="num">4</span>Findings that shape the design</h2>
+  <p class="lede">Five findings from the partner data overturn assumptions we
+  began with. Each changes what we build.</p>
+
+  <h3>F1 &nbsp;Column position is load-bearing &mdash; and this is the dangerous one</h3>
+  <p>MPGB and GGB repeat <strong>bare, unmarked</strong> person columns three
+  times in a single row. Real column positions from the MPGB file:</p>
+
+  <pre>  15 Customer ID   16 Title   17 First Name   18 Last Name   19 DOB     ◀── PROPOSER
+  ...
+  33 Customer ID   35 Title   36 First Name   37 Last Name   38 DOB     ◀── INSURED
+  ...
+                   41 Title   42 First Name   43 Last Name   45 DOB     ◀── NOMINEE</pre>
+
+  <div class="box bad">
+    <div class="t">The string "First Name" maps to three different fields in one file</div>
+    <p>Column 17 → <code>First Name</code>, column 36 → <code>First Name_Plan</code>,
+    column 42 → <code>Nominee First Name</code>. The three headers are
+    <strong>byte-identical</strong>. No LLM, no embedding and no fuzzy match can
+    separate them &mdash; only ordinal position can.</p>
+    <p style="margin-top:2mm">A system keyed purely on header text maps all three
+    to the proposer, and <strong>the wrong person is insured</strong>. Identically
+    for <code>DOB</code> (19/38/45) and <code>Title</code> (16/35/41).</p>
+  </div>
+
+  <p><strong>Design consequence:</strong> the unit of resolution must be
+  <code>(position, header)</code>, never <code>header</code> alone.</p>
+
+  <h3>F2 &nbsp;One column does not always mean one field</h3>
+  <p><code>Nominee Name</code> arrives as a <strong>single column in 9 of 24
+  partners</strong>, but our schema has <code>Nominee First Name</code> and
+  <code>Nominee Last Name</code>. The same applies to <code>name</code> (Namra,
+  Mathooth), <code>custname</code> (Rbl) and <code>NOMINEE_NAME</code> (L&amp;T).</p>
+  <p><strong>Design consequence:</strong> splitting affects roughly a third of the
+  partner base. Transforms are core functionality, not an edge case.</p>
+
+  <h3>F3 &nbsp;Health is a different schema, not a variant</h3>
+  <p>Rbl and House loader carry <strong>repeating insured groups</strong>:</p>
+  <pre>insured_adult2, gender_2a, relationship_2a, dob_2a, age_2a
+insured_child1, gender_c1, relationship_c1, dob_c1, age_c1
+insured_child2, gender_c2, relationship_c2, dob_c2, age_c2</pre>
+  <p>Our schema models <strong>exactly one</strong> insured. A multi-life health
+  row cannot be represented at all. This is a schema gap, not a mapping problem.</p>
+  <p><strong>Design consequence:</strong> separate canonical schemas per product
+  &mdash; <code>loan_v2</code>, <code>health_v1</code>, <code>travel_v1</code>.</p>
+
+  <h3>F4 &nbsp;Some synonyms have zero string overlap</h3>
+  <table class="tight">
+    <tr><th style="width:34%">Partner header</th><th style="width:34%">Our field</th><th>Fuzzy match score</th></tr>
+    <tr><td><code>APPOINTEE_NAME</code> (L&amp;T)</td><td>Guardian FirstName</td><td>~0 &mdash; no shared characters</td></tr>
+    <tr><td><code>SUM_ASSURED</code> / <code>SumAssured</code></td><td>Sum Insured</td><td>low</td></tr>
+    <tr><td><code>GWP</code> (Paisalo)</td><td>Amount</td><td>0</td></tr>
+    <tr><td><code>custname</code> (Rbl)</td><td>First Name</td><td>low</td></tr>
+    <tr><td><code>constructType</code> (Namra)</td><td>Cover Type</td><td>low</td></tr>
+  </table>
+  <p><em>Appointee</em> is the correct insurance term for the guardian of a minor
+  nominee. String similarity will never find it; semantic embeddings will.
+  <strong>This is precisely where an embedding layer earns its cost</strong> &mdash;
+  these cases are semantically obvious and lexically invisible.</p>
+
+  <h3>F5 &nbsp;Typos are systematic, and free to fix</h3>
+  <pre>Propsoal no · Aplication Date · Intetemediry Code · Intemediary Code · Nomini Name
+Transation Date · Disbursment Date · Loan disbusrement date · Convalescene · Booking Scop-Secondry</pre>
+  <p>Pure fuzzy-matching territory &mdash; no model needed. Note that
+  <code>Member No.</code> is sent by 6 partners but our field is
+  <code>Member Number</code>: nobody sends it verbatim, yet fuzzy matching
+  recovers it instantly.</p>
+
+  <h3>F6 &nbsp;Header junk is real and must be tolerated</h3>
+  <ul>
+    <li>Entire declaration paragraphs (~80 words) used as column headers, in <strong>7 partners</strong></li>
+    <li>Leaked BI tool references: <code>'GTLLead'[FirstameComplete]</code></li>
+    <li>Embedded business rules: <code>Policy Tenure ( Cannot be less than Loan tenure subject to maximum of 5 years)</code></li>
+    <li>Merged concepts: <code>AadharAddressLine1</code>, <code>Convalescence Benefit/EMI Value</code></li>
+    <li>Duplicate columns within one file (Mathooth sends <code>memberId</code> twice)</li>
+  </ul>
+</section>
+
+<!-- ================= 5. ARCHITECTURE ================= -->
+<section>
+  <h2><span class="num">5</span>Proposed architecture</h2>
+
+  <h3>5.1 Where it sits</h3>
+  <p>A standalone service called by the portal at upload time, <strong>before
+  enqueue</strong>. The existing SQS pipeline and create-policy API are untouched.
+  Running it as a separate service (rather than embedding it in the portal) lets
+  claims, renewals and commission uploads share one dictionary later, rather than
+  each building an isolated one.</p>
+
+  <h3>5.2 Two-level mapping &mdash; the main design decision</h3>
+  <p>We do not resolve every file from scratch. We resolve against a
+  <strong>family template</strong>, then a <strong>partner delta</strong>.</p>
+
+  <pre>                    ┌── FAMILY TEMPLATE  (~6, hand-verified, versioned)
+  partner file ─────┤
+                    └── PARTNER DELTA    (only where this partner differs)
+                                │
+                       unresolved remainder ──▶ tiered resolver ──▶ review queue</pre>
+
+  <div class="box good">
+    <div class="t">Why this makes 1000+ partners tractable</div>
+    <p>Onboarding becomes: classify into a family (cheap and high-signal, given
+    0.55&ndash;1.00 intra-family similarity), inherit its verified template, then
+    review only the delta. <strong>Given 86% reuse, the delta is small.</strong></p>
+  </div>
+
+  <h3>5.3 Per-product schemas</h3>
+  <p>Driven by finding F3. The alias dictionary is scoped by
+  <code>(tenant, schema_id)</code> so that domains cannot poison each other
+  &mdash; <code>amount</code> means premium in policy and claim amount in claims,
+  and one flat dictionary would let one corrupt the other.</p>
+
+  <h3>5.4 Everything is auditable</h3>
+  <p>Every mapping decision is logged: source header, chosen field, confidence,
+  which layer resolved it, who confirmed it, and when. This is what allows a bad
+  mapping discovered six months later to be traced to <strong>exactly which files
+  used it</strong> &mdash; without which the affected policies cannot be
+  remediated. For regulated data we expect this to be a requirement, not a
+  nicety.</p>
+</section>
+
+<!-- ================= 6. PIPELINE ================= -->
+<section>
+  <h2><span class="num">6</span>The resolution pipeline</h2>
+  <p class="lede">Cheap deterministic methods resolve the easy majority. The
+  model only sees headers that genuinely need judgment.</p>
+
+  <table>
+    <tr><th style="width:6%">Layer</th><th style="width:34%">Method</th><th style="width:24%">Expected load</th><th>Cost</th></tr>
+    <tr><td><strong>0</strong></td><td>Normalize &mdash; case, separators, camelCase, abbreviations, truncate parentheticals</td><td>all columns</td><td><span class="tag ok">free</span></td></tr>
+    <tr><td><strong>1</strong></td><td>Family template + learned alias dictionary</td><td><strong>the bulk</strong></td><td><span class="tag ok">free</span></td></tr>
+    <tr><td><strong>2</strong></td><td>Fuzzy string matching</td><td>typo tail (F5)</td><td><span class="tag ok">free</span></td></tr>
+    <tr><td><strong>3</strong></td><td>Semantic embeddings</td><td>synonym tail (F4)</td><td>cheap</td></tr>
+    <tr><td><strong>4</strong></td><td>LLM reasoning</td><td>entity assignment, novel structures</td><td><span class="tag new">per call</span></td></tr>
+  </table>
+
+  <div class="box">
+    <div class="t">The LLM's real job is narrower than "map headers"</div>
+    <p>It is <strong>entity assignment and structural decisions</strong> &mdash;
+    which of four people a column describes, and whether a column needs splitting.
+    That is precisely where a wrong answer creates a wrong policy, and precisely
+    what cheap methods cannot do.</p>
+  </div>
+
+  <h3>Why we send the whole schema, not a shortlist</h3>
+  <p>An earlier prototype shortlisted candidate fields by string similarity
+  before asking the model. That is self-defeating: <code>Premium Amt</code> has
+  no textual overlap with <code>Amount</code>, so ranking pruned the correct
+  answer out of the list and forced an abstention. All 58 fields go into the
+  system prompt &mdash; about 900 tokens, identical on every call, so it sits in
+  the cacheable prefix and costs almost nothing.</p>
+
+  <h3>Sample values do the narrowing instead</h3>
+  <p>Of the 47 confusable field pairs in our schema, <strong>22 are separable by
+  looking at one value</strong> and 25 are not:</p>
+  <div class="cols">
+    <div>
+      <h4 style="color:var(--good)">Type-separable (22) &mdash; values solve these</h4>
+      <table class="tight">
+        <tr><td><code>Transaction Id</code> vs <code>Transaction Date</code></td></tr>
+        <tr><td><code>Loan A/c No</code> vs <code>Loan Amount</code></td></tr>
+        <tr><td><code>Occupation</code> vs <code>Occupation_Class</code></td></tr>
+      </table>
+    </div>
+    <div>
+      <h4 style="color:var(--bad)">Type-identical (25) &mdash; values useless</h4>
+      <table class="tight">
+        <tr><td><code>First Name</code> vs <code>First Name_Plan</code></td></tr>
+        <tr><td><code>DOB</code> vs <code>DOB_Plan</code></td></tr>
+        <tr><td><code>Address Line 1</code> vs <code>Address Line 2</code></td></tr>
+      </table>
+    </div>
+  </div>
+  <p class="footnote">Our schema has 8 date fields that are mutually
+  indistinguishable by value &mdash; only header semantics and column position
+  separate them. A partner sending <code>Date1, Date2, Date3</code> cannot be
+  resolved by any technique and must go to a human.</p>
+</section>
+
+<!-- ================= 7. LLM ================= -->
+<section>
+  <h2><span class="num">7</span>When we call the LLM</h2>
+
+  <h3>7.1 Invocation policy</h3>
+  <div class="box good">
+    <div class="t">Per unseen header, once ever &mdash; not per row, not per file</div>
+  </div>
+
+  <pre>file arrives
+   │
+   ├─ 1. classify family              deterministic          no LLM
+   ├─ 2. family template + delta       ~86% of headers        free
+   ├─ 3. normalize / alias / fuzzy     typo tail              free
+   ├─ 4. embeddings                    synonym tail           cheap
+   │
+   ├─ 5. remainder ──────────────▶  ONE BATCHED LLM CALL
+   ├─ 6. validator                    deterministic guardrails
+   └─ 7. review queue ─▶ human confirms ─▶ dictionary ─▶ never asked again</pre>
+
+  <h3>7.2 What does <em>not</em> trigger a call</h3>
+  <ul>
+    <li>A file from a partner whose template is pinned and whose headers have not drifted &mdash; <strong>zero calls</strong></li>
+    <li>Any header already in the dictionary for that product</li>
+    <li>Repeat rows &mdash; resolution is per <em>file header set</em>, never per row</li>
+  </ul>
+
+  <h3>7.3 The cost argument</h3>
+  <table>
+    <tr><th>Approach</th><th class="num-col">Calls</th><th>Notes</th></tr>
+    <tr><td><strong>Proposed</strong> &mdash; once per new format</td><td class="num-col"><strong>~1,000 total, ever</strong></td><td>~1 call per partner at onboarding; nothing thereafter</td></tr>
+    <tr><td>Naive &mdash; per row per column</td><td class="num-col">~600,000,000</td><td>1000 partners × 10k rows × 60 columns</td></tr>
+  </table>
+  <p>Call volume also <strong>decays over time</strong>: every confirmed mapping
+  enters the dictionary, so the same header is never sent to a model twice.</p>
+
+  <h3>7.4 Why we batch the whole file into one call</h3>
+  <p>This is a correctness requirement, not an optimisation. Finding F1 showed
+  that MPGB's three identical <code>First Name</code> columns are separable only
+  by their position in the ordered list. <strong>Sending headers one at a time
+  destroys the only signal capable of resolving them.</strong> The model must see
+  the full ordered header list, with indices.</p>
+
+  <h3>7.5 The validation gate &mdash; where the safety actually lives</h3>
+  <p>LLM output is a <strong>proposal</strong>, never applied directly. Every
+  proposal passes deterministic checks, none of which involve AI:</p>
+  <table class="tight">
+    <tr><th style="width:52%">Check</th><th>Action on failure</th></tr>
+    <tr><td>Target field exists in our schema</td><td>Reject &mdash; hallucination</td></tr>
+    <tr><td>Sample values match the target's data type</td><td>Reject &mdash; e.g. dates proposed for a decimal field</td></tr>
+    <tr><td>No two columns claim the same field</td><td>Conflict &mdash; both to review</td></tr>
+    <tr><td>Entity consistent with the surrounding block</td><td>Flag for review</td></tr>
+    <tr><td>All 9 required fields resolved</td><td>File gated</td></tr>
+    <tr><td>Confidence above threshold</td><td>Below &mdash; suggestion only, stays in review</td></tr>
+  </table>
+
+  <div class="box">
+    <div class="t">Abstention is a first-class answer</div>
+    <p>The model is explicitly permitted and encouraged to answer "I don't know."
+    An extra row in the review queue costs a few seconds. A wrong auto-applied
+    mapping silently corrupts a policy record.</p>
+  </div>
+
+  <h3>7.6 Is this an "AI agent"?</h3>
+  <p><strong>Mostly no &mdash; and that is the right answer.</strong> For the
+  large majority of cases, a single well-contexted structured call plus the
+  validator outperforms a multi-step agent: lower latency, lower cost, fewer
+  failure modes, and a far easier audit story for a regulated decision.</p>
+  <p>An agentic loop earns its place in one situation: <strong>the header carries
+  no information and the answer is in the data</strong> &mdash;
+  <code>col_17</code>, <code>Date1/Date2/Date3</code>. There we give the model
+  tools to inspect the column:</p>
+  <table class="tight">
+    <tr><th style="width:38%">Tool</th><th>Resolves</th></tr>
+    <tr><td><code>get_column_values(index, n)</code></td><td>More samples than the default window</td></tr>
+    <tr><td><code>check_format(index)</code></td><td>PAN regex, mobile, ISO date, currency</td></tr>
+    <tr><td><code>distinct_count(index)</code></td><td>Identifier vs categorical</td></tr>
+    <tr><td><code>compare_columns(i, j)</code></td><td>Duplicate or correlated columns</td></tr>
+  </table>
+  <p><strong>Recommendation:</strong> build the single call first. Add tools only
+  when the review queue demonstrates cases a single call cannot solve. Let the
+  queue decide what gets built, not what is technically interesting.</p>
+
+  <h3>7.7 Failure behaviour</h3>
+  <p>The system must be fully functional with the LLM disabled &mdash;
+  <strong>degraded coverage, never degraded correctness</strong>. A model timeout
+  leaves the header unresolved and the file proceeds to review. A provider outage
+  affects only the long tail; the deterministic layers continue unaffected.</p>
+</section>
+
+<!-- ================= 8. DICTIONARY ================= -->
+<section>
+  <h2><span class="num">8</span>The learning dictionary</h2>
+  <p class="lede">This is the mechanism that makes the system get cheaper as
+  partners grow, rather than more expensive.</p>
+
+  <p>The intuitive design &mdash; store each master header as a key and all
+  similar partner headers as its values &mdash; is the right core idea. Four
+  properties of the real partner data require it to be refined.</p>
+
+  <table>
+    <tr><th style="width:31%">Simple form</th><th style="width:38%">Refinement</th><th>Forced by</th></tr>
+    <tr><td>Key on our master field</td><td>Key on the partner alias; keep master → aliases as a UI view</td><td>Lookup direction at runtime</td></tr>
+    <tr><td>Key = header string</td><td>Key = <code>(tenant, schema, scope, alias, occurrence_index)</code></td><td><strong>F1</strong> &mdash; "First Name" has 3 targets in one file</td></tr>
+    <tr><td>Value = one field name</td><td>Value = <code>{targets[], transform, entity}</code></td><td><strong>F2</strong> &mdash; Nominee Name → 2 fields</td></tr>
+    <tr><td>One flat table</td><td>Three scopes: partner → family → global</td><td>"Tenure" means different things per partner</td></tr>
+    <tr><td>Write on validation</td><td><code>provisional</code> → <code>active</code> on confirmation; <code>negative</code> on rejection</td><td>Stops the loop amplifying its own errors</td></tr>
+  </table>
+
+  <h3>8.1 Three scopes, with promotion</h3>
+  <table class="tight">
+    <tr><th style="width:18%">Scope</th><th style="width:40%">Holds</th><th>Example</th></tr>
+    <tr><td><strong>global</strong></td><td>Universally safe aliases</td><td><code>Propsoal no</code> → Proposal</td></tr>
+    <tr><td><strong>family</strong></td><td>One of the ~6 template families</td><td><code>Proposer/Applicant FIRST Name</code> → First Name</td></tr>
+    <tr><td><strong>partner</strong></td><td>Partner overrides and positional entries</td><td>MPGB <code>First Name</code> occurrence 1 → First Name_Plan</td></tr>
+  </table>
+  <p>Lookup runs <strong>partner → family → global</strong>, most specific wins.
+  New mappings are always written at partner scope, where they are cheap to
+  correct. They are <em>promoted</em> to family or global only after appearing in
+  several partners with zero contradictions.</p>
+
+  <div class="box bad">
+    <div class="t">The single most important rule in this design</div>
+    <p><strong>Positional entries never promote.</strong> MPGB's
+    "<code>First Name</code> at occurrence 1 means the insured" is true only for
+    that column layout. Promote it to a global rule and it corrupts every other
+    partner in the system. Every other mistake in this model is recoverable;
+    this one is not.</p>
+  </div>
+
+  <h3>8.2 Lifecycle</h3>
+  <table class="tight">
+    <tr><th style="width:20%">Status</th><th style="width:44%">Meaning</th><th>Behaviour</th></tr>
+    <tr><td><code>provisional</code></td><td>Applied without human confirmation</td><td>Used, but re-verified; promotes after N clean files</td></tr>
+    <tr><td><code>active</code></td><td>Human-confirmed</td><td>Auto-applies</td></tr>
+    <tr><td><code>negative</code></td><td>Human rejected this mapping</td><td>Never suggested again</td></tr>
+    <tr><td><code>retired</code></td><td>Superseded or schema changed</td><td>Ignored, kept for audit</td></tr>
+  </table>
+
+  <p><strong>Negative entries matter more than people expect.</strong> Without
+  them the model re-proposes the same rejected mapping every month, and
+  operations re-rejects it every month.</p>
+
+  <div class="box warn">
+    <div class="t">A subtle failure we are designing against</div>
+    <p>If every auto-applied mapping is written back as fact, a confident but
+    wrong model output becomes permanent and self-reinforcing &mdash; the
+    dictionary teaches itself the mistake. The <code>provisional</code> state
+    exists specifically to prevent this.</p>
+  </div>
+
+  <h3>8.3 A warning on normalization</h3>
+  <p>Normalization must not be too aggressive. <code>Loan Tenure</code> and
+  <code>Policy Tenure</code> must <strong>not</strong> collapse to
+  <code>tenure</code> &mdash; the qualifier carries the meaning, and 16 and 9
+  partners respectively send them as distinct columns. Stripping leading
+  qualifiers is where this design would quietly break.</p>
+</section>
+
+<!-- ================= 9. SCHEMA GAPS ================= -->
+<section>
+  <h2><span class="num">9</span>Gaps in our master schema</h2>
+
+  <div class="box bad">
+    <div class="t">No AI can map a column to a field that does not exist</div>
+    <p>These are business decisions, not engineering problems, and they block
+    real mapping work regardless of how good the AI is.</p>
+  </div>
+
+  <h3>9.1 Fields many partners send that we have nowhere to put</h3>
+  <table>
+    <tr><th style="width:32%">Partner header</th><th class="num-col" style="width:14%">Partners</th><th>Issue</th></tr>
+    <tr><td><code>Gender</code></td><td class="num-col"><strong>17 of 24</strong></td><td>No Gender field exists in our schema at all</td></tr>
+    <tr><td><code>Cover Type</code> (Individual/Floater)</td><td class="num-col">16</td><td>Referenced inside our own Sum Insured field description, but is not itself a field</td></tr>
+    <tr><td><code>Policy Tenure</code></td><td class="num-col">9</td><td>We have one <code>Tenure</code>; partners send Loan Tenure <em>and</em> Policy Tenure separately</td></tr>
+    <tr><td><code>Actual Premium</code> / <code>Transaction Amount</code></td><td class="num-col">8 / 7</td><td>We have one <code>Amount</code> &mdash; which of the two is it?</td></tr>
+    <tr><td><code>Good Health Declaration</code></td><td class="num-col">7</td><td>Underwriting-relevant</td></tr>
+    <tr><td>PED block (flag / remarks / month)</td><td class="num-col">6</td><td>Pre-existing disease</td></tr>
+    <tr><td><code>State</code></td><td class="num-col">6</td><td>We have City and Pin Code but no State</td></tr>
+    <tr><td><code>Proposal No</code></td><td class="num-col">6</td><td>&mdash;</td></tr>
+  </table>
+
+  <div class="box warn">
+    <div class="t">Gender is absent from a life and health master schema</div>
+    <p>17 of 24 partners send it. This is worth escalating on its own merits,
+    independently of this project.</p>
+  </div>
+
+  <h3>9.2 The two ambiguities that most concern us</h3>
+  <p><strong><code>Tenure</code></strong> is our sharpest trap. We have a single
+  field; partners send two distinct columns. Mapping it wrong silently changes
+  policy duration &mdash; a defect that is easy to create and hard to detect.</p>
+  <p><strong><code>Amount</code></strong> is a <em>required</em> field whose
+  meaning is currently ambiguous against three distinct partner columns
+  (<code>Actual Premium</code>, <code>Transaction Amount</code>,
+  <code>Premium Amount</code>). We need a definitive answer before we can map it
+  safely.</p>
+
+  <h3>9.3 Our nine required fields</h3>
+  <p>A file cannot create a policy without these. They are the real gate &mdash;
+  <strong>not</strong> whether every column mapped:</p>
+  <pre>Member Number · Application Date · Loan A/c No · Customer ID · First Name
+Last Name · DOB · Amount · Sum Insured</pre>
+  <p>This reframes partial-file handling usefully: an unmapped
+  <code>GST Registration Date</code> should never block an upload. We recommend
+  gating on the nine required fields only.</p>
+</section>
+
+<!-- ================= 10. DELIVERY ================= -->
+<section>
+  <h2><span class="num">10</span>Delivery plan</h2>
+
+  <table>
+    <tr><th style="width:9%">Phase</th><th style="width:26%">Content</th><th style="width:13%">Timing</th><th>Exit criteria</th></tr>
+    <tr><td><strong>0</strong></td><td>Frame the problem &mdash; operations walkthrough of one real file</td><td>Week 1</td><td>Problem statement and agreed target number</td></tr>
+    <tr><td><strong>1</strong></td><td>Ground truth &mdash; historical files and how they were fixed</td><td>Weeks 1&ndash;2</td><td>≥300 labelled header→field pairs <span class="tag ok">partly done</span></td></tr>
+    <tr><td><strong>2</strong></td><td>Lock the decisions in Section 12</td><td>Week 3</td><td>Dated decision log with owners</td></tr>
+    <tr><td><strong>3</strong></td><td>Architecture &mdash; service, API contract, data model</td><td>Week 4</td><td>Design doc signed off</td></tr>
+    <tr><td><strong>4</strong></td><td>Build in thin slices (below)</td><td>Weeks 5&ndash;10</td><td>Each slice green against the eval set</td></tr>
+    <tr><td><strong>5</strong></td><td>Calibrate thresholds against real data</td><td>Week 11</td><td>Zero wrong auto-applies, coverage maximised</td></tr>
+    <tr><td><strong>6</strong></td><td><strong>Shadow mode</strong> &mdash; produce mappings, apply nothing</td><td>Weeks 12&ndash;15</td><td>Agreement rate above target</td></tr>
+    <tr><td><strong>7</strong></td><td>Staged rollout, per partner, with kill switches</td><td>Week 16+</td><td>&mdash;</td></tr>
+    <tr><td><strong>8</strong></td><td>Extend to claims, renewals, commissions</td><td>Later</td><td>&mdash;</td></tr>
+  </table>
+
+  <h3>10.1 Build slices</h3>
+  <table class="tight">
+    <tr><th style="width:10%">Slice</th><th style="width:52%">Content</th><th>Ships alone?</th></tr>
+    <tr><td><strong>S1</strong></td><td>Normalize + family templates + alias dictionary + audit log</td><td><span class="tag ok">yes &mdash; no AI</span></td></tr>
+    <tr><td><strong>S2</strong></td><td>Review UI + confirmation loop feeding the dictionary</td><td>yes</td></tr>
+    <tr><td><strong>S3</strong></td><td>Fuzzy matching + position-aware entity resolution</td><td>yes</td></tr>
+    <tr><td><strong>S4</strong></td><td>Semantic embeddings for the synonym tail</td><td>yes</td></tr>
+    <tr><td><strong>S5</strong></td><td>LLM for entity assignment and novel structures</td><td>yes</td></tr>
+    <tr><td><strong>S6</strong></td><td>Transforms (splitting a name column into two fields)</td><td>yes</td></tr>
+  </table>
+
+  <h3>10.2 Two phases we recommend not compressing</h3>
+  <p><strong>Phase 1 is a gate, not a task.</strong> Collecting historical files
+  and how they were fixed is unglamorous and is not AI work, but it is the only
+  thing that makes our confidence thresholds defensible rather than invented.</p>
+  <p><strong>Shadow mode is the only honest validation.</strong> Running in
+  production while applying nothing, and comparing every suggestion against what
+  the human actually did, is the only way to know the system is safe before it
+  touches a policy.</p>
+
+  <h3>10.3 Where to start the rollout</h3>
+  <p>Begin with the <strong>master-aligned family</strong> &mdash; Allience,
+  Avanti, Data loader, Hello ujjivan feeder. At 83&ndash;91% coverage the risk is
+  near zero and the volume is immediate.</p>
+
+  <div class="box good">
+    <div class="t">If the timeline compresses: ship S1 + S2 only, with no AI</div>
+    <p>Normalization, the six family templates, an alias dictionary, and a review
+    loop where every confirmation is remembered. With 86% header reuse this alone
+    should remove most of the manual effort &mdash; no model cost, no latency in
+    the upload path, and no data-residency question to answer.</p>
+    <p style="margin-top:2mm">Add embeddings when the synonym tail dominates the
+    review queue, and the LLM when entity ambiguity does. <strong>Sequence the AI
+    by what the review queue is actually full of, not by what is technically
+    interesting.</strong></p>
+  </div>
+</section>
+
+<!-- ================= 11. RISKS ================= -->
+<section>
+  <h2><span class="num">11</span>Risks and controls</h2>
+
+  <table>
+    <tr><th style="width:34%">Risk</th><th>Control</th></tr>
+    <tr><td><strong>Wrong entity → wrong person insured</strong><br><span style="color:var(--muted)">The F1 failure mode</span></td><td>Position-aware resolution; unmarked repeated blocks are <em>never</em> auto-applied; flag rather than guess when entity is uncertain</td></tr>
+    <tr><td><strong>Schema gaps silently drop partner data</strong></td><td>Decisions in Section 9 before build; any column that is populated but unmapped must be reported, never silently discarded</td></tr>
+    <tr><td><strong>The dictionary learns its own mistakes</strong></td><td><code>provisional</code> status; promotion requires clean files or human confirmation; positional entries never promote</td></tr>
+    <tr><td><strong>A wrong mapping is discovered months later</strong></td><td>Append-only decision log identifies exactly which files used the bad alias, so affected policies can be remediated</td></tr>
+    <tr><td><strong>Health multi-life cannot be represented</strong></td><td>Separate <code>health_v1</code> schema; do not force into the loan schema</td></tr>
+    <tr><td><strong>No usable ground truth exists</strong></td><td>Phase 1 is a gate; thresholds cannot be justified without it</td></tr>
+    <tr><td><strong>Policy-holder data sent to an external model</strong></td><td>Headers and redacted samples only; or in-region hosting. Requires a compliance answer before Phase 4</td></tr>
+    <tr><td><strong>Nobody owns the review queue</strong></td><td>Forced to an answer in Week 3. If unowned, "flag for human" is a dead end and the design must change</td></tr>
+    <tr><td><strong>LLM provider outage</strong></td><td>System is fully functional with the model disabled &mdash; degraded coverage, never degraded correctness</td></tr>
+  </table>
+
+  <h3>The failure we are most concerned about</h3>
+  <div class="box bad">
+    <div class="t">A confidently wrong mapping is worse than no mapping</div>
+    <p>A file that stops and asks a human costs minutes. A file that proceeds
+    with the nominee's name in the insured's field creates a policy that is wrong
+    in a way nobody notices until a claim is made. Every threshold in this design
+    is set to prefer the first outcome.</p>
+  </div>
+</section>
+
+<!-- ================= 12. DECISIONS ================= -->
+<section>
+  <h2><span class="num">12</span>Decisions required</h2>
+  <p class="lede">Each needs a named owner and a written answer. Two are
+  blocking.</p>
+
+  <table>
+    <tr><th style="width:7%">#</th><th style="width:40%">Decision</th><th>Why it matters</th></tr>
+    <tr><td><strong>D1</strong></td><td>When does mapping run &mdash; per upload, once at onboarding, or hybrid?</td><td>Determines whether we build a runtime service or a configuration tool. <em>We recommend hybrid.</em></td></tr>
+    <tr><td><strong>D2</strong></td><td>Who resolves what the system cannot?</td><td>If no one owns a review queue, "flag for human" is a dead end</td></tr>
+    <tr><td><strong>D3</strong></td><td>What does a wrong mapping cost &mdash; detectable, reversible, regulated?</td><td>Sets the auto-apply threshold, which is currently a guess</td></tr>
+    <tr><td><strong>D4</strong></td><td>What happens to a partially resolvable file?</td><td><em>We recommend gating on the 9 required fields only</em></td></tr>
+    <tr><td><strong>D5</strong></td><td>Product scope &mdash; loan, health, travel?</td><td>Each needs its own canonical schema</td></tr>
+    <tr><td style="background:var(--bad-soft)"><strong>D6</strong></td><td style="background:var(--bad-soft)"><strong>Schema gaps &mdash; do we add Gender, Cover Type, Policy Tenure, State and the PED block, or explicitly drop them?</strong></td><td style="background:var(--bad-soft)"><span class="tag req">blocking</span> No AI resolves a column with no target</td></tr>
+    <tr><td style="background:var(--bad-soft)"><strong>D7</strong></td><td style="background:var(--bad-soft)"><strong>What does our <code>Amount</code> field actually mean?</strong></td><td style="background:var(--bad-soft)"><span class="tag req">blocking</span> A required field, ambiguous against three partner columns</td></tr>
+  </table>
+
+  <h3>What we need from this room</h3>
+  <table class="tight">
+    <tr><th style="width:26%">Stakeholder</th><th>Ask</th></tr>
+    <tr><td><strong>Operations</strong></td><td>One working session walking a real partner file end to end, including a case that needed manual fixing. Access to historical files and any record of past fixes.</td></tr>
+    <tr><td><strong>Product / business</strong></td><td>D1, D2, D4, D5, and the schema-gap decisions D6 and D7. A definition of success as a number.</td></tr>
+    <tr><td><strong>Engineering</strong></td><td>Confirmation the service can sit before enqueue. Approved model and embedding providers, region, and hosting.</td></tr>
+    <tr><td><strong>Risk / compliance</strong></td><td>D3 &mdash; the cost of a wrong mapping. Whether automated mapping of policy data is acceptable and under what controls. Constraints on sending data to a model.</td></tr>
+  </table>
+
+  <h3>Recommended immediate next step</h3>
+  <div class="box">
+    <div class="t">One working session with operations, this week</div>
+    <p>Walk a single real partner file from arrival through to policy creation,
+    including a case that needed manual header fixing. Bring the file, and
+    whoever fixed it. That one walkthrough answers most of Section 2 and several
+    of the decisions above &mdash; and those historical fixes become the labelled
+    data set we need to set thresholds honestly.</p>
+  </div>
+</section>
+
+<!-- ================= APPENDIX ================= -->
+<section>
+  <h2><span class="num">A</span>Appendix</h2>
+
+  <h3>A.1 Our master schema, in numbers</h3>
+  <table class="tight">
+    <tr><th style="width:46%">Property</th><th>Value</th></tr>
+    <tr><td>Canonical fields</td><td>58</td></tr>
+    <tr><td>Required fields</td><td>9</td></tr>
+    <tr><td>Person-attribute fields</td><td>18, across 4 entities (proposer 5, insured 5, nominee 5, guardian 3)</td></tr>
+    <tr><td>Confusable field pairs</td><td>47 &mdash; of which 12 span different people</td></tr>
+    <tr><td>Separable by sample values</td><td>22 pairs</td></tr>
+    <tr><td>Not separable by values</td><td>25 pairs &mdash; need header semantics or position</td></tr>
+    <tr><td>Date fields</td><td>8, mutually indistinguishable by value</td></tr>
+    <tr><td>Small enough to skip a vector database?</td><td>Yes &mdash; 58 fields fits comfortably in a prompt</td></tr>
+  </table>
+
+  <h3>A.2 The four people sharing one row</h3>
+  <p>Our schema packs <strong>proposer, insured, nominee and guardian</strong>
+  into a single row. This produces a <em>systematic</em> rather than random error:
+  the unqualified variant is always the shortest string, so naive matching scores
+  a bare <code>First Name</code> highest against the <strong>proposer</strong>
+  every single time &mdash; even in a file that means the insured.</p>
+  <p>Resolution is therefore two-stage: decide <strong>whose</strong> column this
+  is, then <strong>which</strong> attribute. Three signals, in descending
+  reliability:</p>
+  <ol>
+    <li><strong>Explicit marker</strong> &mdash; <code>Nominee First Name</code>, <code>First Name_Plan</code> → certain</li>
+    <li><strong>Sibling exclusion</strong> &mdash; a file containing both <code>First Name</code> and <code>Nominee First Name</code> proves the bare one is not the nominee → strong</li>
+    <li><strong>Block adjacency</strong> &mdash; person blocks arrive contiguously, so a decided neighbour is real evidence</li>
+  </ol>
+  <p>Where none apply, the entity is a <em>guess</em> and the mapping is flagged
+  rather than applied.</p>
+
+  <h3>A.3 Partner formats analysed</h3>
+  <table class="tight">
+    <tr><th style="width:36%">Partner</th><th style="width:18%">Product</th><th>Naming convention</th></tr>
+    <tr><td>L&amp;T</td><td>Loan</td><td>UPPER_SNAKE</td></tr>
+    <tr><td>MPGB, GGB</td><td>Loan</td><td>Title Case &mdash; unmarked repeated blocks</td></tr>
+    <tr><td>Tujbhavani</td><td>Loan</td><td>Mixed</td></tr>
+    <tr><td>Sambhavati</td><td>Loan</td><td>Title Case &mdash; metadata block only</td></tr>
+    <tr><td>Respo</td><td>Loan</td><td>snake_case</td></tr>
+    <tr><td>Paisalo</td><td>Loan</td><td>PascalCase / concatenated</td></tr>
+    <tr><td>Namra, Mathooth</td><td>Health</td><td>camelCase &mdash; identical to each other</td></tr>
+    <tr><td>IIFL</td><td>Loan</td><td>Mixed, with leaked BI references</td></tr>
+    <tr><td>Capri g, Uss, Uco, Ubi, Boi, Agri feeder</td><td>Loan</td><td>Title Case &mdash; "Proposer/Applicant" family</td></tr>
+    <tr><td>Avanti, Allience</td><td>Loan</td><td>Title Case &mdash; master-aligned</td></tr>
+    <tr><td>Rbl, House loader</td><td>Health</td><td>snake_case &mdash; multi-life, identical to each other</td></tr>
+    <tr><td>Hospital partner</td><td>Health</td><td>Title Case</td></tr>
+    <tr><td>Hello ujjivan standalone / feeder</td><td>Loan</td><td>Title Case</td></tr>
+    <tr><td>Data loader</td><td>Loan</td><td>Title Case &mdash; master-aligned</td></tr>
+  </table>
+
+  <h3>A.4 Caveats on this analysis</h3>
+  <div class="box warn">
+    <div class="t">Two limits on the evidence presented here</div>
+    <p><strong>1. The partner headers were reconstructed from a PDF.</strong> The
+    source document lost header boundaries &mdash; word gaps and column gaps were
+    both rendered as the same spacing &mdash; so the header lists were rebuilt
+    using domain judgment. The structural conclusions are robust: 86% reuse would
+    have to be wildly wrong to change them. The precise figures are not
+    eval-grade. <strong>We need the original CSV or Excel files before using this
+    to set thresholds.</strong></p>
+    <p style="margin-top:2mm"><strong>2. Travel was named as a product category
+    but no travel samples were supplied.</strong> The analysis covers 19 loan and
+    5 health formats. No design claim is made for travel.</p>
+  </div>
+
+  <h3>A.5 Glossary</h3>
+  <table class="tight">
+    <tr><th style="width:30%">Term</th><th>Meaning</th></tr>
+    <tr><td>Canonical field</td><td>One of the 58 columns in our master policy schema</td></tr>
+    <tr><td>Alias</td><td>A partner's name for one of our canonical fields</td></tr>
+    <tr><td>Family template</td><td>A verified mapping shared by a cluster of similarly-formatted partners</td></tr>
+    <tr><td>Entity</td><td>Which of the four people a column describes &mdash; proposer, insured, nominee, guardian</td></tr>
+    <tr><td>Auto-apply threshold</td><td>Confidence above which a mapping is applied without human review</td></tr>
+    <tr><td>Abstention</td><td>The system answering "I don't know" rather than guessing</td></tr>
+    <tr><td>Shadow mode</td><td>Running in production producing mappings but applying none, to measure accuracy safely</td></tr>
+  </table>
+</section>
+
+</body>
+</html>
