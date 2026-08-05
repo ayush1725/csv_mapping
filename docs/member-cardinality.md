@@ -1,8 +1,15 @@
 # Member Cardinality — Up to 6 Members per Policy
 
-Business rule: **a policy covers at most 6 members.** This document records
-what that implies for the canonical schema, the entity model, header
-resolution, and validation.
+Business rule: **a policy covers at most 6 members, and the proposer counts as
+one of the 6.** So a policy carries the proposer plus **at most 5 additional
+insured members**.
+
+The create-policy API enforces this: a 7th member causes the call to fail.
+**The exact status code is unconfirmed** — reported as "most likely 404, not
+sure" — which is itself a finding, see §4.2.
+
+This document records what the cap implies for the canonical schema, the entity
+model, header resolution, and validation.
 
 ---
 
@@ -106,13 +113,13 @@ These must all normalize to `(role, ordinal)` before row-level assignment.
 
 | # | Rule | Action on breach |
 |---|---|---|
-| V1 | Members per policy ≤ 6 | Reject the row with a specific reason code |
+| V1 | **Total persons including the proposer ≤ 6** (proposer + ≤5 insured) | Reject the row **pre-flight** with a specific reason code |
 | V2 | **Declared `No. of Lives` == member blocks actually populated** | Hard-stop the row |
 | V3 | Member ordinals are contiguous from 1 | Flag — a gap suggests a missed mapping |
 | V4 | No duplicate absolute ordinal | Conflict — two columns claim the same member |
 | V5 | Each populated member has the minimum required attributes | Flag incomplete member |
 
-### V2 is the important one
+### 4.1 V2 is the important one
 
 If a file declares `No. of Lives = 5` but only 4 member blocks resolve, either
 the file is truncated **or the header mapping missed a block**. The result would
@@ -125,6 +132,49 @@ high-confidence while the set is incomplete.
 
 `No. of Lives` is present in 21 of 24 partners, so the check is broadly
 applicable.
+
+### 4.2 Enforce the cap pre-flight, never at the API
+
+The create-policy API already rejects a 7th member, so it is tempting to let it
+be the enforcement point. That is the wrong place, because of **where in the
+pipeline the failure lands**:
+
+```
+upload accepted ─▶ rows enqueued to SQS ─▶ row 4,312 calls create-policy ─▶ ERROR
+       ▲                                                                      │
+       └──────────── partner was already told the file was accepted ──────────┘
+```
+
+An over-count discovered at the API is discovered **after** the file passed
+upload, **after** rows were queued, and **per row, mid-batch**. The partner has
+already been told the upload succeeded. Recovering means identifying which rows
+failed, out of a batch, from an error the operator did not raise and may not be
+able to interpret.
+
+Validated at the pre-flight gate instead, the same condition is caught **before
+enqueue**, against the whole file, with a message naming the row and the member
+count. This is precisely the value of having a pre-flight stage at all.
+
+**The API check remains as a backstop. It must not be the primary control.**
+
+### 4.3 The unconfirmed error code is itself a risk
+
+The status code returned for a 7th member is reported as "most likely 404, not
+sure". Two problems follow, independent of this project:
+
+| Problem | Consequence |
+|---|---|
+| **404 is semantically wrong** for a payload violation — 400 or 422 is the correct class | A 404 is indistinguishable from "endpoint not found", so a routing or deploy fault looks identical to a data fault |
+| **If the code is unknown, current handling is also unknown** | Nobody can say today whether these rows are retried, dead-lettered, or silently dropped |
+
+The second matters more. If the pipeline retries on 404, a 7-member row retries
+forever. If it swallows the error, the row disappears with no record and the
+partner is never told.
+
+**Action:** submit a deliberate 7-member row against the create-policy API in a
+non-production environment, record the exact status and body, and confirm what
+the SQS consumer currently does with it. This is a short task and it establishes
+how many such failures may already be occurring unnoticed.
 
 ---
 
@@ -147,13 +197,25 @@ applicable.
 These are specification questions, not engineering ones, and each changes the
 validation rules:
 
+### Answered
+
+| # | Question | Answer |
+|---|---|---|
+| Q1 | Does the cap of 6 include the proposer? | **Yes.** 6 total persons — proposer + at most 5 insured members |
+| Q5 | What happens at 7? | The create-policy API rejects the call. Status code unconfirmed — see §4.2, §4.3 |
+
+### Still open
+
 | # | Question | Why it matters |
 |---|---|---|
-| Q1 | Does the cap of 6 **include the proposer**, or is it 6 insured members plus the proposer? | Changes V1 from `≤6` to `≤7` total persons |
-| Q2 | Is the **nominee** counted as a member? | Nominee is currently a separate entity, not an insured life |
+| **Q7** | **Does a partner's `No. of Lives` include the proposer — and is that consistent across partners?** | **Blocks V2.** If partner A's "5 lives" means 5 insured plus a proposer (6 total) and partner B's means 5 total, the same value implies different member counts. Likely varies by partner and may need to be a per-family setting |
+| Q2 | Is the **nominee** counted toward the 6? | Nominee is modelled as a separate entity, not an insured life. Affects V1 arithmetic |
 | Q3 | One nominee **per policy** or **per member**? | Determines whether nominee also becomes an indexed group |
 | Q4 | Can each nominee have its own **guardian**? | Same question for the guardian entity |
-| Q5 | What happens at 7 members — reject the file, reject the row, or split into two policies? | Determines error handling and whether splitting is ever legitimate |
-| Q6 | Are there **role constraints** — e.g. maximum adults, maximum children, must include the proposer? | Additional validation rules |
+| Q6 | Are there **role constraints** — maximum adults, maximum children, must the proposer be insured? | Additional validation rules |
+| Q8 | Is a policy that legitimately has 7+ people ever **split into two policies**, or always rejected? | If splitting is valid, it is a business operation the resolver must never perform silently |
 
-Q1 and Q5 block implementation of V1.
+**Q7 is the new blocker.** V1 is now implementable; V2 is not, because the
+member count implied by `No. of Lives` is ambiguous until the convention is
+known. Given that 21 of 24 partners send the field, the convention should be
+verified per family rather than assumed global.
